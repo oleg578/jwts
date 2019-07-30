@@ -108,3 +108,61 @@ func TestParse(t *testing.T) {
 		})
 	}
 }
+
+func TestToken_Validate(t *testing.T) {
+	type fields struct {
+		RawStr    string
+		Header    map[string]interface{}
+		Payload   map[string]interface{}
+		Signature string
+		IsValid   bool
+	}
+	h := make(map[string]interface{})
+	h["alg"] = `HS256`
+	h["typ"] = `JWT`
+	pl := make(map[string]interface{})
+	pl["exp"] = int64(1564569962)
+	pl["uid"] = `user123`
+	type args struct {
+		secret string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			"ValidateOK",
+			fields{
+				`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1NjQ1Njk5NjIsInVpZCI6InVzZXIxMjMifQ.WwsQ+wku4rkYOP3QoI+FzInOb22BKpzGVWjuT3HlhPI`,
+				h,
+				pl,
+				`WwsQ+wku4rkYOP3QoI+FzInOb22BKpzGVWjuT3HlhPI`,
+				true,
+			},
+			args{},
+			false,
+		},
+		/*{
+			"ValidateFault",
+			fields{},
+			args{},
+			true,
+		},*/
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tok := &Token{
+				RawStr:    tt.fields.RawStr,
+				Header:    tt.fields.Header,
+				Payload:   tt.fields.Payload,
+				Signature: tt.fields.Signature,
+				IsValid:   tt.fields.IsValid,
+			}
+			if err := tok.Validate(tt.args.secret); (err != nil) != tt.wantErr {
+				t.Errorf("Token.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
