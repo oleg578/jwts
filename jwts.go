@@ -47,8 +47,6 @@ func CreateTokenHS256(payload map[string]string, secret string) (token Token, er
 	}
 	payloadEncoded := base64.RawStdEncoding.EncodeToString(payloadM)
 	unsignedTok := headerEncoded + "." + payloadEncoded
-	//fmt.Println(unsignedTok)
-	//fmt.Println(hashMAC([]byte(unsignedTok), []byte(secret)))
 	//signing
 	token.Signature = base64.RawStdEncoding.EncodeToString(
 		hashMAC([]byte(unsignedTok), []byte(secret)))
