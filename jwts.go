@@ -109,7 +109,6 @@ func Parse(token string) (t Token, err error) {
 	if err != nil {
 		return t, err
 	}
-	//log.Println(string(headerDecoded))
 	err = json.Unmarshal(headerDecoded, &t.Header)
 	if err != nil {
 		return t, err
