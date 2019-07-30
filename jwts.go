@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -68,9 +69,27 @@ func SetExp(dur interface{}) int64 {
 	return exp.Unix()
 }
 
-//verify
-func IsValid(token, secret string) bool {
-	return false
+//validate exp, sign
+func (t *Token) Validate(secret string) error {
+	timemark := time.Now().Unix()
+	if _, ok := t.Payload["exp"]; !ok {
+		t.IsValid = false
+		return fmt.Errorf("exp claim needed")
+	}
+	if t.Payload["exp"].(int64) <= timemark {
+		t.IsValid = false
+		return fmt.Errorf("expired")
+	}
+	//test sign
+	segments := strings.Split(t.RawStr, ".")
+	unsign := segments[0] + "." + segments[1]
+	if t.Signature != base64.RawStdEncoding.EncodeToString(
+		hashMAC([]byte(unsign), []byte(secret))) {
+		t.IsValid = false
+		return fmt.Errorf("wrong sign")
+	}
+	t.IsValid = true
+	return nil
 }
 
 //parse
