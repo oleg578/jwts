@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 func hashMAC(message, key []byte) []byte {
@@ -43,4 +44,34 @@ func CreateTokenHS256(payload interface{}, secret string) (token string, err err
 		hashMAC([]byte(unsignedTok), []byte(secret)))
 	//assembly token
 	return unsignedTok + "." + signature, nil
+}
+
+//TODO:
+
+//verify
+func IsValid(token, secret string) bool {
+	return false
+}
+
+//parse
+func Parse(token string) (header, payload interface{}, err error) {
+	segments := strings.Split(token, ".")
+	if len(segments) != 3 {
+		return nil, nil, fmt.Errorf("wrong token - must have 3 segments")
+	}
+	head, err := base64.RawStdEncoding.DecodeString(segments[0])
+	if err != nil {
+		return
+	}
+	if err = json.Unmarshal(head, &header); err != nil {
+		return
+	}
+	pl, err := base64.RawStdEncoding.DecodeString(segments[1])
+	if err != nil {
+		return
+	}
+	if err = json.Unmarshal(pl, &payload); err != nil {
+		return
+	}
+	return
 }
