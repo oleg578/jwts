@@ -6,8 +6,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"strings"
 )
+
+type Token struct {
+	RawStr    string
+	Header    map[string]string
+	Payload   map[string]string
+	Signature string
+	IsValid   bool
+}
 
 func hashMAC(message, key []byte) []byte {
 	mac := hmac.New(sha256.New, key)
@@ -15,35 +22,41 @@ func hashMAC(message, key []byte) []byte {
 	return mac.Sum(nil)
 }
 
-func CreateTokenHS256(payload interface{}, secret string) (token string, err error) {
+func CreateTokenHS256(payload map[string]string, secret string) (token Token, err error) {
 	if len(secret) != 32 {
-		return "", fmt.Errorf("The secret length must be 32 bytes")
+		token.IsValid = false
+		return token, fmt.Errorf("The secret length must be 32 bytes")
 	}
 	//create header
-	header := struct {
-		Alg string `json:"alg"`
-		Typ string `json:"typ"`
-	}{
-		Alg: "HS256",
-		Typ: "JWT",
-	}
+	header := make(map[string]string, 2)
+	header["alg"] = "HS256"
+	header["typ"] = "JWT"
+	token.Header = header
 	headerM, errM := json.Marshal(header)
 	if errM != nil {
-		return "", errM
+		token.IsValid = false
+		return token, errM
 	}
 	headerEncoded := base64.RawStdEncoding.EncodeToString(headerM)
 	//create payload
+	token.Payload = payload
 	payloadM, errM := json.Marshal(payload)
 	if errM != nil {
-		return "", errM
+		token.IsValid = false
+		return token, errM
 	}
 	payloadEncoded := base64.RawStdEncoding.EncodeToString(payloadM)
 	unsignedTok := headerEncoded + "." + payloadEncoded
+	//fmt.Println(unsignedTok)
+	//fmt.Println(hashMAC([]byte(unsignedTok), []byte(secret)))
 	//signing
-	signature := base64.RawStdEncoding.EncodeToString(
+	token.Signature = base64.RawStdEncoding.EncodeToString(
 		hashMAC([]byte(unsignedTok), []byte(secret)))
 	//assembly token
-	return unsignedTok + "." + signature, nil
+	token.RawStr = unsignedTok + "." + token.Signature
+	//no err?
+	token.IsValid = true
+	return
 }
 
 //TODO:
@@ -54,24 +67,7 @@ func IsValid(token, secret string) bool {
 }
 
 //parse
-func Parse(token string) (header, payload interface{}, err error) {
-	segments := strings.Split(token, ".")
-	if len(segments) != 3 {
-		return nil, nil, fmt.Errorf("wrong token - must have 3 segments")
-	}
-	head, err := base64.RawStdEncoding.DecodeString(segments[0])
-	if err != nil {
-		return
-	}
-	if err = json.Unmarshal(head, &header); err != nil {
-		return
-	}
-	pl, err := base64.RawStdEncoding.DecodeString(segments[1])
-	if err != nil {
-		return
-	}
-	if err = json.Unmarshal(pl, &payload); err != nil {
-		return
-	}
+func Parse(token string) (t *Token, err error) {
+
 	return
 }

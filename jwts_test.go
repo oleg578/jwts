@@ -5,16 +5,6 @@ import (
 	"testing"
 )
 
-//SECRETKEY = `Jkk6BxVNDEema7PXRYBNgbeECXwHnCkw`
-/*
-pl := struct {
-	UserId string `json:"uid"`
-}{
-	UserId: "user123",
-}
-*/
-// token :
-// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJ1c2VyMTIzIn0.ehNsenR6tnSO9ghWtITeYKfPHTVrW59KEJdnaXxbZGk
 func Test_hashMAC(t *testing.T) {
 	type args struct {
 		message []byte
@@ -26,7 +16,7 @@ func Test_hashMAC(t *testing.T) {
 		want []byte
 	}{
 		{
-			"genKey",
+			"genKeyOK",
 			args{
 				message: []byte(`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJ1c2VyMTIzIn0`),
 				key:     []byte(`Jkk6BxVNDEema7PXRYBNgbeECXwHnCkw`),
@@ -48,40 +38,34 @@ func Test_hashMAC(t *testing.T) {
 
 func TestCreateTokenHS256(t *testing.T) {
 	type args struct {
-		payload interface{}
+		payload map[string]string
 		secret  string
 	}
+	pl := make(map[string]string)
+	pl["uid"] = "user123"
+	h := make(map[string]string)
+	h["alg"] = "HS256"
+	h["typ"] = "JWT"
 	tests := []struct {
 		name      string
 		args      args
-		wantToken string
+		wantToken Token
 		wantErr   bool
 	}{
 		{
-			"CreateTokenHS256",
+			"getTokOK",
 			args{
-				struct {
-					UserId string `json:"uid"`
-				}{
-					UserId: "user123",
-				},
+				pl,
 				`Jkk6BxVNDEema7PXRYBNgbeECXwHnCkw`,
 			},
-			`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJ1c2VyMTIzIn0.ehNsenR6tnSO9ghWtITeYKfPHTVrW59KEJdnaXxbZGk`,
-			false,
-		},
-		{
-			"WrongTokenHS256",
-			args{
-				struct {
-					UserId string `json:"uid"`
-				}{
-					UserId: "user123",
-				},
-				`Jkk6BxVNDEema7PXRYBNgbeECXwHnCk`,
+			Token{
+				`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiJ1c2VyMTIzIn0.ehNsenR6tnSO9ghWtITeYKfPHTVrW59KEJdnaXxbZGk`,
+				h,
+				pl,
+				`ehNsenR6tnSO9ghWtITeYKfPHTVrW59KEJdnaXxbZGk`,
+				true,
 			},
-			``,
-			true,
+			false,
 		},
 	}
 	for _, tt := range tests {
@@ -91,8 +75,55 @@ func TestCreateTokenHS256(t *testing.T) {
 				t.Errorf("CreateTokenHS256() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if gotToken != tt.wantToken {
+			if !reflect.DeepEqual(gotToken, tt.wantToken) {
 				t.Errorf("CreateTokenHS256() = %v, want %v", gotToken, tt.wantToken)
+			}
+		})
+	}
+}
+
+func TestIsValid(t *testing.T) {
+	type args struct {
+		token  string
+		secret string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsValid(tt.args.token, tt.args.secret); got != tt.want {
+				t.Errorf("IsValid() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParse(t *testing.T) {
+	type args struct {
+		token string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantT   *Token
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotT, err := Parse(tt.args.token)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotT, tt.wantT) {
+				t.Errorf("Parse() = %v, want %v", gotT, tt.wantT)
 			}
 		})
 	}
