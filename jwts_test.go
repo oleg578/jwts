@@ -3,6 +3,7 @@ package jwts
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func Test_hashMAC(t *testing.T) {
@@ -38,12 +39,15 @@ func Test_hashMAC(t *testing.T) {
 
 func TestCreateTokenHS256(t *testing.T) {
 	type args struct {
-		payload map[string]string
+		payload map[string]interface{}
 		secret  string
 	}
-	pl := make(map[string]string)
+	pl := make(map[string]interface{})
 	pl["uid"] = "user123"
-	h := make(map[string]string)
+	tm := time.Now()
+	exp := tm.Add(time.Minute * 1440)
+	pl["exp"] = exp.Unix()
+	h := make(map[string]interface{})
 	h["alg"] = "HS256"
 	h["typ"] = "JWT"
 	tests := []struct {
