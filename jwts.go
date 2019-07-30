@@ -1,11 +1,14 @@
 package jwts
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -93,7 +96,53 @@ func (t *Token) Validate(secret string) error {
 }
 
 //parse
-func Parse(token string) (t *Token, err error) {
+func Parse(token string) (t Token, err error) {
+	segments := strings.Split(token, ".")
+	if len(segments) != 3 {
+		return t, fmt.Errorf("wrong token")
+	}
+	t.Signature = segments[2]
+	t.IsValid = true
+	t.RawStr = token
+	//get header
+	headerDecoded, err := base64.RawStdEncoding.DecodeString(segments[0])
+	if err != nil {
+		return t, err
+	}
+	//log.Println(string(headerDecoded))
+	err = json.Unmarshal(headerDecoded, &t.Header)
+	if err != nil {
+		return t, err
+	}
+	//get payload
+	payloadDecoded, err := base64.RawStdEncoding.DecodeString(segments[1])
+	if err != nil {
+		return t, err
+	}
+	dec := json.NewDecoder(bytes.NewBuffer(payloadDecoded))
+	dec.UseNumber()
+	for {
+		var c map[string]interface{}
+		if err := dec.Decode(&c); err == io.EOF {
+			break
+		} else if err != nil {
+			return t, err
+		}
+		for k, v := range c {
+			if reflect.TypeOf(v).Name() == "Number" {
+				vv := v.(json.Number)
+				if newval, err := vv.Int64(); err != nil {
+					c[k] = vv.String()
+				} else {
+					c[k] = newval
+				}
+			}
+		}
+		t.Payload = c
+	}
 
+	if err != nil {
+		return t, err
+	}
 	return
 }

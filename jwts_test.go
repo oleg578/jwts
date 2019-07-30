@@ -43,7 +43,7 @@ func TestCreateTokenHS256(t *testing.T) {
 	}
 	pl := make(map[string]interface{})
 	pl["uid"] = "user123"
-	pl["exp"] = 1564561928
+	pl["exp"] = 2428485259
 	h := make(map[string]interface{})
 	h["alg"] = "HS256"
 	h["typ"] = "JWT"
@@ -60,10 +60,10 @@ func TestCreateTokenHS256(t *testing.T) {
 				`Jkk6BxVNDEema7PXRYBNgbeECXwHnCkw`,
 			},
 			Token{
-				`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1NjQ1NjE5MjgsInVpZCI6InVzZXIxMjMifQ.MuGRKA3A52foIVI1miVZT6Hu1CPW+4Ngz2dbUe5JesU`,
+				`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI0Mjg0ODUyNTksInVpZCI6InVzZXIxMjMifQ.qxmN9W1qtRariMTHS5fIudyTMJ0qAI88CoexkYwJqWs`,
 				h,
 				pl,
-				`MuGRKA3A52foIVI1miVZT6Hu1CPW+4Ngz2dbUe5JesU`,
+				`qxmN9W1qtRariMTHS5fIudyTMJ0qAI88CoexkYwJqWs`,
 				true,
 			},
 			false,
@@ -83,32 +83,6 @@ func TestCreateTokenHS256(t *testing.T) {
 	}
 }
 
-func TestParse(t *testing.T) {
-	type args struct {
-		token string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantT   *Token
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotT, err := Parse(tt.args.token)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(gotT, tt.wantT) {
-				t.Errorf("Parse() = %v, want %v", gotT, tt.wantT)
-			}
-		})
-	}
-}
-
 func TestToken_Validate(t *testing.T) {
 	type fields struct {
 		RawStr    string
@@ -123,6 +97,11 @@ func TestToken_Validate(t *testing.T) {
 	pl := make(map[string]interface{})
 	pl["exp"] = int64(1564569962)
 	pl["uid"] = `user123`
+	plexpired := make(map[string]interface{})
+	plexpired["exp"] = int64(1000)
+	plexpired["uid"] = `user123`
+	plwrong := make(map[string]interface{})
+	plwrong["uid"] = `user123`
 	type args struct {
 		secret string
 	}
@@ -141,15 +120,39 @@ func TestToken_Validate(t *testing.T) {
 				`WwsQ+wku4rkYOP3QoI+FzInOb22BKpzGVWjuT3HlhPI`,
 				true,
 			},
-			args{},
+			args{
+				`Jkk6BxVNDEema7PXRYBNgbeECXwHnCkw`,
+			},
 			false,
 		},
-		/*{
-			"ValidateFault",
-			fields{},
-			args{},
+		{
+			"ValidateExpired",
+			fields{
+				`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1NjQ1Njk5NjIsInVpZCI6InVzZXIxMjMifQ.WwsQ+wku4rkYOP3QoI+FzInOb22BKpzGVWjuT3HlhPI`,
+				h,
+				plexpired,
+				`WwsQ+wku4rkYOP3QoI+FzInOb22BKpzGVWjuT3HlhPI`,
+				true,
+			},
+			args{
+				`Jkk6BxVNDEema7PXRYBNgbeECXwHnCkw`,
+			},
 			true,
-		},*/
+		},
+		{
+			"ValidatePayloadWrong",
+			fields{
+				`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1NjQ1Njk5NjIsInVpZCI6InVzZXIxMjMifQ.WwsQ+wku4rkYOP3QoI+FzInOb22BKpzGVWjuT3HlhPI`,
+				h,
+				plwrong,
+				`WwsQ+wku4rkYOP3QoI+FzInOb22BKpzGVWjuT3HlhPI`,
+				true,
+			},
+			args{
+				`Jkk6BxVNDEema7PXRYBNgbeECXwHnCkw`,
+			},
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -162,6 +165,95 @@ func TestToken_Validate(t *testing.T) {
 			}
 			if err := tok.Validate(tt.args.secret); (err != nil) != tt.wantErr {
 				t.Errorf("Token.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+/*func TestParse(t *testing.T) {
+	pl := make(map[string]interface{})
+	pl["uid"] = "user123"
+	pl["exp"] = 2428485259
+	h := make(map[string]interface{})
+	h["alg"] = "HS256"
+	h["typ"] = "JWT"
+	type args struct {
+		token string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantT   *Token
+		wantErr bool
+	}{
+		{"ParseOK",
+			args{
+				`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI0Mjg0ODUyNTksInVpZCI6InVzZXIxMjMifQ.qxmN9W1qtRariMTHS5fIudyTMJ0qAI88CoexkYwJqWs`,
+			},
+			&Token{
+				`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI0Mjg0ODUyNTksInVpZCI6InVzZXIxMjMifQ.qxmN9W1qtRariMTHS5fIudyTMJ0qAI88CoexkYwJqWs`,
+				h,
+				pl,
+				`qxmN9W1qtRariMTHS5fIudyTMJ0qAI88CoexkYwJqWs`,
+				true,
+			},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotT, err := Parse(tt.args.token)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotT, &tt.wantT) {
+				t.Errorf("Parse() = %v, want %v", gotT, tt.wantT)
+			}
+		})
+	}
+}
+*/
+
+func TestParse(t *testing.T) {
+	pl := make(map[string]interface{})
+	pl["uid"] = "user123"
+	pl["exp"] = int64(2428485259)
+	h := make(map[string]interface{})
+	h["alg"] = "HS256"
+	h["typ"] = "JWT"
+	type args struct {
+		token string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantT   Token
+		wantErr bool
+	}{
+		{"ParseOK",
+			args{
+				`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI0Mjg0ODUyNTksInVpZCI6InVzZXIxMjMifQ.qxmN9W1qtRariMTHS5fIudyTMJ0qAI88CoexkYwJqWs`,
+			},
+			Token{
+				`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI0Mjg0ODUyNTksInVpZCI6InVzZXIxMjMifQ.qxmN9W1qtRariMTHS5fIudyTMJ0qAI88CoexkYwJqWs`,
+				h,
+				pl,
+				`qxmN9W1qtRariMTHS5fIudyTMJ0qAI88CoexkYwJqWs`,
+				true,
+			},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotT, err := Parse(tt.args.token)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Parse() error = %v,\n wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotT, tt.wantT) {
+				t.Errorf("Parse() = %+v,\n want %+v", gotT, tt.wantT)
 			}
 		})
 	}
