@@ -170,51 +170,6 @@ func TestToken_Validate(t *testing.T) {
 	}
 }
 
-/*func TestParse(t *testing.T) {
-	pl := make(map[string]interface{})
-	pl["uid"] = "user123"
-	pl["exp"] = 2428485259
-	h := make(map[string]interface{})
-	h["alg"] = "HS256"
-	h["typ"] = "JWT"
-	type args struct {
-		token string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantT   *Token
-		wantErr bool
-	}{
-		{"ParseOK",
-			args{
-				`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI0Mjg0ODUyNTksInVpZCI6InVzZXIxMjMifQ.qxmN9W1qtRariMTHS5fIudyTMJ0qAI88CoexkYwJqWs`,
-			},
-			&Token{
-				`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI0Mjg0ODUyNTksInVpZCI6InVzZXIxMjMifQ.qxmN9W1qtRariMTHS5fIudyTMJ0qAI88CoexkYwJqWs`,
-				h,
-				pl,
-				`qxmN9W1qtRariMTHS5fIudyTMJ0qAI88CoexkYwJqWs`,
-				true,
-			},
-			false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotT, err := Parse(tt.args.token)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(gotT, &tt.wantT) {
-				t.Errorf("Parse() = %v, want %v", gotT, tt.wantT)
-			}
-		})
-	}
-}
-*/
-
 func TestParse(t *testing.T) {
 	pl := make(map[string]interface{})
 	pl["uid"] = "user123"
