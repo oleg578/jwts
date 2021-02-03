@@ -105,24 +105,24 @@ func Parse(token string) (t Token, err error) {
 	t.IsValid = true
 	t.RawStr = token
 	//get header
-	headerDecoded, err := base64.RawStdEncoding.DecodeString(segments[0])
-	if err != nil {
-		return t, err
+	headerDecoded, errHdr := base64.RawStdEncoding.DecodeString(segments[0])
+	if errHdr != nil {
+		return t, errHdr
 	}
 	err = json.Unmarshal(headerDecoded, &t.Header)
 	if err != nil {
 		return t, err
 	}
 	//get payload
-	payloadDecoded, err := base64.RawStdEncoding.DecodeString(segments[1])
-	if err != nil {
-		return t, err
+	payloadDecoded, errPld := base64.RawStdEncoding.DecodeString(segments[1])
+	if errPld != nil {
+		return t, errPld
 	}
 	dec := json.NewDecoder(bytes.NewBuffer(payloadDecoded))
 	dec.UseNumber()
 	for {
 		var c map[string]interface{}
-		if err := dec.Decode(&c); err == io.EOF {
+		if err = dec.Decode(&c); err == io.EOF {
 			break
 		} else if err != nil {
 			return t, err
@@ -139,7 +139,6 @@ func Parse(token string) (t Token, err error) {
 		}
 		t.Payload = c
 	}
-
 	if err != nil {
 		return t, err
 	}
