@@ -18,7 +18,8 @@ type Token struct {
 	Header    map[string]interface{}
 	Payload   map[string]interface{}
 	Signature string
-	IsValid   bool
+	Valid     bool
+	Expired   bool
 }
 
 func hashMAC(message, key []byte) []byte {
@@ -29,8 +30,8 @@ func hashMAC(message, key []byte) []byte {
 
 func CreateTokenHS256(payload map[string]interface{}, secret string) (token Token, err error) {
 	if len(secret) != 32 {
-		token.IsValid = false
-		return token, fmt.Errorf("The secret length must be 32 bytes")
+		token.Valid = false
+		return token, fmt.Errorf("the secret length must be 32 bytes")
 	}
 	//create header
 	header := make(map[string]interface{}, 2)
@@ -39,19 +40,19 @@ func CreateTokenHS256(payload map[string]interface{}, secret string) (token Toke
 	token.Header = header
 	headerM, errM := json.Marshal(header)
 	if errM != nil {
-		token.IsValid = false
+		token.Valid = false
 		return token, errM
 	}
 	headerEncoded := base64.RawStdEncoding.EncodeToString(headerM)
 	//create payload
 	token.Payload = payload
 	if _, ok := payload["exp"]; !ok {
-		token.IsValid = false
+		token.Valid = false
 		return token, fmt.Errorf("need exp value")
 	}
 	payloadM, errM := json.Marshal(payload)
 	if errM != nil {
-		token.IsValid = false
+		token.Valid = false
 		return token, errM
 	}
 	payloadEncoded := base64.RawStdEncoding.EncodeToString(payloadM)
@@ -62,36 +63,35 @@ func CreateTokenHS256(payload map[string]interface{}, secret string) (token Toke
 	//assembly token
 	token.RawStr = unsignedTok + "." + token.Signature
 	//no err?
-	token.IsValid = true
+	token.Valid = true
 	return
 }
 
-func SetExp(dur interface{}) int64 {
-	now := time.Now()
-	exp := now.Add(time.Minute * time.Duration(int64(dur.(int))))
-	return exp.Unix()
+func (t *Token) IsExpired() error {
+	timemark := time.Now().Unix()
+	if _, ok := t.Payload["exp"]; !ok {
+		t.Expired = true
+		return fmt.Errorf("exp claim needed")
+	}
+	if t.Payload["exp"].(int64) <= timemark {
+		t.Expired = true
+		return fmt.Errorf("expired")
+	}
+	t.Expired = false
+	return nil
 }
 
 //validate exp, sign
 func (t *Token) Validate(secret string) error {
-	timemark := time.Now().Unix()
-	if _, ok := t.Payload["exp"]; !ok {
-		t.IsValid = false
-		return fmt.Errorf("exp claim needed")
-	}
-	if t.Payload["exp"].(int64) <= timemark {
-		t.IsValid = false
-		return fmt.Errorf("expired")
-	}
 	//test sign
 	segments := strings.Split(t.RawStr, ".")
 	unsign := segments[0] + "." + segments[1]
 	if t.Signature != base64.RawStdEncoding.EncodeToString(
 		hashMAC([]byte(unsign), []byte(secret))) {
-		t.IsValid = false
+		t.Valid = false
 		return fmt.Errorf("wrong sign")
 	}
-	t.IsValid = true
+	t.Valid = true
 	return nil
 }
 
@@ -102,16 +102,14 @@ func Parse(token string) (t Token, err error) {
 		return t, fmt.Errorf("wrong token")
 	}
 	t.Signature = segments[2]
-	t.IsValid = true
 	t.RawStr = token
 	//get header
 	headerDecoded, errHdr := base64.RawStdEncoding.DecodeString(segments[0])
 	if errHdr != nil {
 		return t, errHdr
 	}
-	err = json.Unmarshal(headerDecoded, &t.Header)
-	if err != nil {
-		return t, err
+	if errUm := json.Unmarshal(headerDecoded, &t.Header); errUm != nil {
+		return t, errUm
 	}
 	//get payload
 	payloadDecoded, errPld := base64.RawStdEncoding.DecodeString(segments[1])
@@ -120,11 +118,14 @@ func Parse(token string) (t Token, err error) {
 	}
 	dec := json.NewDecoder(bytes.NewBuffer(payloadDecoded))
 	dec.UseNumber()
+	var c map[string]interface{}
 	for {
-		var c map[string]interface{}
-		if err = dec.Decode(&c); err == io.EOF {
+		errDec := dec.Decode(&c)
+		if errDec == io.EOF {
 			break
-		} else if err != nil {
+		}
+		if errDec != nil {
+			err = errDec
 			return t, err
 		}
 		for k, v := range c {
@@ -138,9 +139,6 @@ func Parse(token string) (t Token, err error) {
 			}
 		}
 		t.Payload = c
-	}
-	if err != nil {
-		return t, err
 	}
 	return
 }
