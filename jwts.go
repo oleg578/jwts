@@ -29,10 +29,6 @@ func hashMAC(message, key []byte) []byte {
 }
 
 func CreateTokenHS256(payload map[string]interface{}, secret string) (token Token, err error) {
-	if len(secret) != 32 {
-		token.Valid = false
-		return token, fmt.Errorf("the secret length must be 32 bytes")
-	}
 	//create header
 	header := make(map[string]interface{}, 2)
 	header["alg"] = "HS256"
