@@ -1,3 +1,3 @@
-module github.com/oleg578/jwts
+module jwts
 
-go 1.15
+go 1.25
