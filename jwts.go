@@ -15,8 +15,8 @@ import (
 
 type Token struct {
 	RawStr    string
-	Header    map[string]interface{}
-	Payload   map[string]interface{}
+	Header    map[string]any
+	Payload   map[string]any
 	Signature string
 	Valid     bool
 	Expired   bool
